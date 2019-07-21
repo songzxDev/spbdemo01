@@ -1,0 +1,1 @@
+INSERT INTO `mycat`(`name`) VALUES('Tomcat'),('JettyCat');
