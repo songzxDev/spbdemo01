@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>登陆</title>
+</head>
+<body>
+<div id="login">
+    <div>
+        <label for="loginName"></label><input id="loginName" v-model="loginName" type="text">
+    </div>
+    <div>
+        <label for="password"></label><input id="password" v-model="password" type="password">
+    </div>
+    <div>
+        <button type="button" :disabled="!loginBtnDisabled" @click="handleLoginClick">登陆</button>
+    </div>
+
+</div>
+<script th:src="@{/static/vue.min.js}"></script>
+<script th:src="@{/static/jquery.min.js}"></script>
+<script th:src="@{/static/sha1.min.js}"></script>
+
+<script>
+    let login = new Vue({
+        el: '#login',
+        data: {
+            loginName: '',
+            password: '',
+        },
+        computed: {
+            loginBtnDisabled: function () {
+                let loginName = (this.loginName || '').replace(/(^s*)|(s*$)/g, "");
+                let password = (this.password || '').replace(/(^s*)|(s*$)/g, "");
+                return loginName.length > 0 && password.length > 0;
+            }
+        },
+        methods: {
+            handleLoginClick: function () {
+                let that = this;
+                let loginName = (that.loginName || '').replace(/(^s*)|(s*$)/g, "");
+                let password = (that.password || '').replace(/(^s*)|(s*$)/g, "");
+                if (loginName.length && password.length) {
+                    password = sha1(password);
+                    $.ajax({
+                        type: 'POST',
+                        url: '/loginSubmit/',
+                        data: {username: loginName, password: password},
+                        dataType: 'json'
+                    }).done(function (reps) {
+                        if(reps.returncode === 0) {
+                            window.location.href = '/pageBase/';
+                        }
+                    });
+                }
+            }
+        }
+    });
+</script>
+</body>
+</html>

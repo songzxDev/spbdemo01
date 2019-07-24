@@ -10,4 +10,9 @@ public class PageController {
     public String pageBase() {
         return "base.html";
     }
+
+    @RequestMapping("/pageLogin/")
+    public String pageLogin() {
+        return "login.html";
+    }
 }
