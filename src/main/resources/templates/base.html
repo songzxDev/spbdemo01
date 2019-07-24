@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>首页</title>
+</head>
+<body>
+<script th:src="@{/static/vue.js}"></script>
+<div id="app">
+    <div style="margin: 20px;">
+        <input type="text" v-model="value">
+        <p>您好：<span v-text="value" style="color: #0000c3;"></span>，欢迎访问！{{ new Date().toLocaleDateString() }}</p>
+    </div>
+</div>
+<script>
+    let app = new Vue({
+        el: '#app',
+        data: {
+            value: ''
+        }
+    });
+</script>
+
+</body>
+</html>
