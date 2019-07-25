@@ -50,6 +50,8 @@
                     }).done(function (reps) {
                         if(reps.returncode === 0) {
                             window.location.href = '/pageBase/';
+                        } else {
+                            alert(reps.msg);
                         }
                     });
                 }
