@@ -3,6 +3,7 @@ package org.songzx.spbdemo01.controller;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.songzx.spbdemo01.adapter.WebSecurityConfig;
 import org.songzx.spbdemo01.service.UserServiceI;
+import org.songzx.spbdemo01.util.MyCommonUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,7 +33,8 @@ public class UserController {
             map.put("returncode", 0);
             map.put("msg", "模拟登录成功！");
             // 设置session
-            session.setAttribute(WebSecurityConfig.SESSION_KEY, username);
+            session.setAttribute(WebSecurityConfig.SESSION_KEY, MyCommonUtils.getTokenByUnameAndPwd(username, password));
+            session.setAttribute(WebSecurityConfig.CURR_USER, username);
         } else {
             map.put("returncode", 100);
             map.put("msg", "模拟登录失败，密码不正确！");

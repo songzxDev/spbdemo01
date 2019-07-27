@@ -18,6 +18,7 @@ public class WebSecurityConfig extends WebMvcConfigurationSupport {
      * 登录session key
      */
     public final static String SESSION_KEY = "sessionId";
+    public final static String CURR_USER = "currUser";
 
     @Override
     protected void addInterceptors(InterceptorRegistry registry) {
@@ -51,6 +52,8 @@ public class WebSecurityConfig extends WebMvcConfigurationSupport {
             HttpSession session = request.getSession();
             if (session.getAttribute(SESSION_KEY) != null) {
                 isLogin = true;
+            } else {
+                response.sendRedirect("/pageLogin/");
             }
             return isLogin;
         }

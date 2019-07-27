@@ -5,11 +5,16 @@
     <title>首页</title>
 </head>
 <body>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const CURR_USER = [[${currUser}]];
+    /*]]>*/
+</script>
 <script th:src="@{/static/vue.js}"></script>
 <div id="app">
     <div style="margin: 20px;">
         <input type="text" v-model="value">
-        <p>您好：<span v-text="value" style="color: #0000c3;"></span>，欢迎访问！{{ new Date().toLocaleDateString() }}</p>
+        <p>【{{ currUser }}】您好：<span v-text="value" style="color: #0000c3;"></span>，欢迎访问！{{ new Date().toLocaleDateString() }}</p>
         <a href="/loginOut/" target="_blank">退出</a>
     </div>
 </div>
@@ -17,7 +22,8 @@
     let app = new Vue({
         el: '#app',
         data: {
-            value: ''
+            value: '',
+            currUser: Object.freeze(CURR_USER),
         }
     });
 </script>
