@@ -30,16 +30,16 @@
         },
         computed: {
             loginBtnDisabled: function () {
-                let loginName = (this.loginName || '').replace(/(^s*)|(s*$)/g, "");
-                let password = (this.password || '').replace(/(^s*)|(s*$)/g, "");
+                let loginName = (this.loginName || '').replace(/\s+/g,"");
+                let password = (this.password || '').replace(/\s+/g,"");
                 return loginName.length > 0 && password.length > 0;
             }
         },
         methods: {
             handleLoginClick: function () {
                 let that = this;
-                let loginName = (that.loginName || '').replace(/(^s*)|(s*$)/g, "");
-                let password = (that.password || '').replace(/(^s*)|(s*$)/g, "");
+                let loginName = (that.loginName || '').replace(/\s+/g,"");
+                let password = (that.password || '').replace(/\s+/g,"");
                 if (loginName.length && password.length) {
                     password = sha1(password);
                     $.ajax({
