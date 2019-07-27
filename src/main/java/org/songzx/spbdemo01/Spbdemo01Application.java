@@ -25,19 +25,19 @@ public class Spbdemo01Application implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        showConnection();
-        showData();
+//        showConnection();
+//        showData();
     }
 
-    private void showConnection() throws SQLException {
-        log.info(dataSource.toString());
-        Connection conn = dataSource.getConnection();
-        log.info(conn.toString());
-        conn.close();
-    }
-
-    private void showData() {
-        jdbcTemplate.queryForList("SELECT * FROM `mycat`")
-                .forEach(row -> log.info(row.toString()));
-    }
+//    private void showConnection() throws SQLException {
+//        log.info(dataSource.toString());
+//        Connection conn = dataSource.getConnection();
+//        log.info(conn.toString());
+//        conn.close();
+//    }
+//
+//    private void showData() {
+//        jdbcTemplate.queryForList("SELECT * FROM `mycat`")
+//                .forEach(row -> log.info(row.toString()));
+//    }
 }
