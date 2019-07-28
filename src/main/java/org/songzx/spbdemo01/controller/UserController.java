@@ -65,9 +65,9 @@ public class UserController {
         } else if (StringUtils.isBlank(tbUserLogin.getPassword())) {
             map.put("returncode", 102);
             map.put("msg", "password参数不能为空！");
-        } else if (StringUtils.isBlank(tbUserLogin.getEmail())) {
+        } else if (StringUtils.isBlank(tbUserLogin.getEmail()) || !MyCommonUtils.checkEmail(tbUserLogin.getEmail())) {
             map.put("returncode", 103);
-            map.put("msg", "email参数不能为空！");
+            map.put("msg", "email参数不能为空且为邮箱的标准格式！");
         } else {
             try {
                 if (StringUtils.isBlank(userService.getUserPwdByUname(tbUserLogin.getLoginname()))) {
