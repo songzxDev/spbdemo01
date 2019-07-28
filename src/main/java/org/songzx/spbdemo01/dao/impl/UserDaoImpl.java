@@ -1,6 +1,7 @@
 package org.songzx.spbdemo01.dao.impl;
 
 import org.songzx.spbdemo01.dao.UserDaoI;
+import org.songzx.spbdemo01.entity.TbUserLogin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -8,7 +9,6 @@ import org.springframework.stereotype.Repository;
 import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.util.List;
 import java.util.Map;
 
 @Repository
@@ -17,6 +17,7 @@ public class UserDaoImpl implements UserDaoI {
     private DataSource dataSource;
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
 
     @Override
     public String getUserPwdByUname(String username) throws SQLException, Exception {
@@ -28,5 +29,13 @@ public class UserDaoImpl implements UserDaoI {
             password = (String) map.get("password");
         }
         return password;
+    }
+
+    @Override
+    public String saveUser(TbUserLogin tbUserLogin) throws SQLException, Exception {
+        int inNum = jdbcTemplate.update("INSERT INTO `userlogin` (`loginname`, `password`, `email`) VALUES(?, ?, ?)",
+                new Object[]{tbUserLogin.getLoginname(), tbUserLogin.getPassword(), tbUserLogin.getEmail()},
+                new int[]{Types.VARCHAR, Types.VARCHAR, Types.VARCHAR});
+        return inNum + "";
     }
 }
