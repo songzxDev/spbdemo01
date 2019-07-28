@@ -3,6 +3,8 @@ package org.songzx.spbdemo01.dao.impl;
 import org.songzx.spbdemo01.dao.UserDaoI;
 import org.songzx.spbdemo01.entity.TbUserLogin;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -22,11 +24,14 @@ public class UserDaoImpl implements UserDaoI {
     @Override
     public String getUserPwdByUname(String username) throws SQLException, Exception {
         String password = "";
-        Map<String, Object> map = jdbcTemplate.queryForMap("select password from `userlogin` where loginname=?",
-                new Object[]{username},
-                new int[]{Types.VARCHAR});
-        if (map != null && !map.isEmpty()) {
+        try {
+            // queryForMap 查询结果不能为空
+            Map<String, Object> map = jdbcTemplate.queryForMap("select password from `userlogin` where loginname=?",
+                    new Object[]{username},
+                    new int[]{Types.VARCHAR});
             password = (String) map.get("password");
+        } catch (EmptyResultDataAccessException e) {
+            e.printStackTrace();
         }
         return password;
     }
