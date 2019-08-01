@@ -52,7 +52,7 @@
 </body>
 
 <!--<script src="js/index.js" type="text/javascript" charset="utf-8"></script>-->
-<script type="text/javascript">
+<script type="text/javascript" th:inline="none">
     // 黑白棋  又叫反棋
     class Reversi {
         constructor(canvasId) {
@@ -65,7 +65,7 @@
             let body = document.documentElement || document.body;
             let minWidth = Math.min(body.clientWidth, body.clientHeight);
             // 属性
-            this.pieces = []; // 棋子数组 二位数组
+            this.pieces = []; // 棋子数组 二位数组 [[]]
             this.recommend = [];
             this.rowCount = 8; // 行数
             this.colCount = this.rowCount;// 列数
