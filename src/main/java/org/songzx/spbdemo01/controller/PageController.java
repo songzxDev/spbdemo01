@@ -30,4 +30,9 @@ public class PageController {
     public String pageLogin() {
         return "login.html";
     }
+
+    @GetMapping("/pageBlackWhiteGame/")
+    public String pageBlackWhiteGame() {
+        return "blackwhitegame.html";
+    }
 }

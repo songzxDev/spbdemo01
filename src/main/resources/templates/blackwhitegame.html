@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" >
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        body {
+            font-size: 36px;
+        }
+
+        * {
+            padding: 0;
+            margin: 0;
+        }
+
+        .score {
+            text-align: center;
+            line-height: 50px;
+            height: 50px;
+        }
+
+        .buttons {
+            text-align: center;
+        }
+
+        button {
+            font-size: 36px;
+            line-height: 50px;
+            margin-right: 30px;
+            padding: 0 30px;
+        }
+
+        div {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div>
+    <canvas id="blackWhite"></canvas>
+</div>
+
+<p class="score">
+    <!--<span>比分</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-->
+    <span id="score">黑:白 = 2:2</span>
+</p>
+<p class="buttons">
+    <button id="regret">悔棋</button>
+    <button id="giveUp">认输</button>
+    <button id="negotiate">求和</button>
+</p>
+</body>
+
+<!--<script src="js/index.js" type="text/javascript" charset="utf-8"></script>-->
+<script type="text/javascript">
+    // 黑白棋  又叫反棋
+    class Reversi {
+        constructor(canvasId) {
+            this.canvasId = canvasId;
+            this.resetData();
+        }
+
+        // 重置数据，再来一局
+        resetData() {
+            let body = document.documentElement || document.body;
+            let minWidth = Math.min(body.clientWidth, body.clientHeight);
+            // 属性
+            this.pieces = []; // 棋子数组 二位数组
+            this.recommend = [];
+            this.rowCount = 8; // 行数
+            this.colCount = this.rowCount;// 列数
+            this.cellWidth = minWidth / this.rowCount; //每个格子的宽
+            this.width = this.rowCount * this.cellWidth; // 棋盘的宽
+            this.height = this.width; // 棋盘的高
+            this.R = this.cellWidth * 0.4; // 棋子半径
+            this.HR = this.cellWidth / 4; // 提示格子的半径 hintRadius
+            this.HColor = "#e73480"; // 提示棋子的颜色
+            this.hisStatus = []; // 历史记录 history status
+            this.noChessCount = 0; // 没棋走次数
+            this.active = "black"; // 当前走棋方
+            this.canvas = document.getElementById(this.canvasId); // canvas DOM
+            this.ctx = this.canvas.getContext("2d"); // canvas环境
+            this.whiteCount = 2; // 白棋数量
+            this.blackCount = 2; // 黑棋数量
+            this.victor = ""; // 胜利方
+
+            this.init();
+        }
+
+        // 初始化数据
+        init() {
+            this.initCanvas();
+            this.initPiece();
+            this.recommed();
+            this.renderUi();
+        }
+
+        // 设置棋盘的宽高
+        initCanvas() {
+            this.canvas.width = this.width;
+            this.canvas.height = this.height;
+        }
+
+        // 初始化棋子
+        initPiece() {
+            let initPieces = [];
+            for (let i = 0; i < this.rowCount; i++) { // 行
+                initPieces.push([]);
+                for (let j = 0; j < this.colCount; j++) { // 列
+                    initPieces[i].push({value: 0, color: ""});
+                }
+            }
+            // 初始的时候中间有四个棋子
+            let center = Math.floor((this.rowCount - 1) / 2); //
+            initPieces[center][center].value = 1;
+            initPieces[center][center].color = "black";
+            initPieces[center][center + 1].value = 1;
+            initPieces[center][center + 1].color = "white";
+            initPieces[center + 1][center].value = 1;
+            initPieces[center + 1][center].color = "white";
+            initPieces[center + 1][center + 1].value = 1;
+            initPieces[center + 1][center + 1].color = "black";
+//        console.log(initPieces);
+
+            this.pieces = this.deepClone(initPieces);
+            this.hisStatus[0] = this.deepClone(initPieces);
+        }
+
+        renderUi() {
+            //清除之前的画布
+            this.ctx.clearRect(0, 0, this.width, this.height);
+
+            // 重绘画布
+            this.drawMap();
+            this.drawPieces();
+            this.recommed();
+            this.drawHint();
+        }
+
+        //画一个棋子或一个提示圆点
+        drawDot(x, y, r, color) {
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, r, 0, 2 * Math.PI);
+            this.ctx.closePath();
+
+            this.ctx.fillStyle = color;
+            this.ctx.fill();
+        }
+
+        // 画棋盘
+        drawMap() {
+            // 背景
+            this.ctx.beginPath();
+            this.ctx.rect(0, 0, this.width, this.height);
+            this.ctx.closePath();
+            this.ctx.fillStyle = "#0099CC";
+            this.ctx.fill();
+
+            // 画横线
+            this.ctx.beginPath();
+            for (let i = 0; i < this.rowCount; i++) {
+                this.ctx.moveTo(0, this.cellWidth * i);
+                this.ctx.lineTo(this.cellWidth * this.rowCount, this.cellWidth * i);
+            }
+            this.ctx.stroke();
+
+            // 画纵线
+            this.ctx.beginPath();
+            for (let i = 0; i < this.colCount; i++) {
+                this.ctx.moveTo(this.cellWidth * i, 0);
+                this.ctx.lineTo(this.cellWidth * i, this.cellWidth * this.colCount);
+            }
+            this.ctx.stroke();
+        }
+
+        // 画所有的棋子
+        drawPieces() {
+            for (let i = 0; i < this.pieces.length; i++) {
+                for (let j = 0; j < this.pieces[i].length; j++) {
+                    if (this.pieces[i][j].value) {
+                        let x = i * this.cellWidth + this.cellWidth / 2;
+                        let y = j * this.cellWidth + this.cellWidth / 2;
+                        this.drawDot(x, y, this.R, this.pieces[i][j].color);
+                    }
+                }
+            }
+        }
+
+        // 画所有的提示
+        drawHint() {
+            for (let i = 0; i < this.recommend.length; i++) {
+                let x = this.recommend[i].x * this.cellWidth + this.cellWidth / 2;
+                let y = this.recommend[i].y * this.cellWidth + this.cellWidth / 2;
+                this.drawDot(x, y, this.HR, this.HColor);
+            }
+        }
+
+        // 是否可以走这一步
+        canGo(xx, yy) {// 条件 1.双方无期可走        2.棋盘下满了          3.没有本色的棋子了
+            let flag = false;
+            for (let i = 0; i < this.recommend.length; i++) {
+                if (this.recommend[i].x === xx && this.recommend[i].y === yy) {
+                    flag = true;
+                    break;
+                }
+            }
+            return flag;
+        }
+
+        // 吃子
+        fire(x, y) {
+            for (let i = 0; i < this.recommend.length; i++) {
+                if (this.recommend[i].x === x && this.recommend[i].y === y) { // 走推荐位置(吃掉可以吃的各个方向)
+                    // console.log("x:"+this.recommend[i].x+";y:"+this.recommend[i].y,"匹配位置");
+                    let xx = x, yy = y;
+                    switch (this.recommend[i].direction) { //上加下减y  左加右减x
+                        case "上": // j在下（大） yy在上（小） xx不变
+                            while (++yy < this.recommend[i].j) {
+                                this.pieces[xx][yy].color = this.active;
+                            }
+                            break;
+                        case "右":// x在左（小） xx在右（大） yy不变
+                            while (--xx > this.recommend[i].i) {
+                                this.pieces[xx][yy].color = this.active;
+                            }
+                            break;
+                        case "下":// j在上（小） yy在下（大） xx不变
+                            while (--yy > this.recommend[i].j) {
+                                this.pieces[xx][yy].color = this.active;
+                            }
+                            break;
+                        case "左":// i在左（小） yy在右（大） i不变
+                            while (++xx < this.recommend[i].i) {
+                                this.pieces[xx][yy].color = this.active;
+                            }
+                            break;
+                        case "右上":
+                            while (--xx > this.recommend[i].i) {
+                                this.pieces[xx][++yy].color = this.active;
+                            }
+                            break;
+                        case "右下":
+                            while (--xx > this.recommend[i].i) {
+                                this.pieces[xx][--yy].color = this.active;
+                            }
+                            break;
+                        case "左下":
+                            while (++xx < this.recommend[i].i) {
+                                this.pieces[xx][--yy].color = this.active;
+                            }
+                            break;
+                        case "左上":
+                            while (++xx < this.recommend[i].i) {
+                                this.pieces[xx][++yy].color = this.active;
+                            }
+                            break;
+                        default:
+                            console.log("jjle,吃不了子");
+                    }
+                }
+            }
+        }
+
+        // 显示可以走的位置
+        recommed() {
+            this.recommend = [];
+            for (let i = 0; i < this.rowCount; i++) {
+                for (let j = 0; j < this.colCount; j++) {
+                    if (this.pieces[i][j].color === this.active) { // 轮到当前方走棋
+                        // console.log("当前棋子颜色:"+active+";x:"+i+";y:"+j);
+                        // 判断8个方向上是否可以走
+                        // 右  1右测第一个是敌方棋子，2然后排查后面的每一个但不越界，3遇到己方或者空结束(己方的不可以走，空可以走，敌方的继续排查)
+                        if (this.pieces[i + 1] && this.pieces[i + 1][j].color && this.pieces[i + 1][j].color !== this.active) { // 有对方的棋才可以走
+                            for (let a = 2; i + a < this.rowCount; a++) {
+                                if (this.pieces[i + a][j].color === "") { // 空
+                                    this.recommend.push({x: i + a, y: j, i: i, j: j, direction: "右"});
+                                    // console.log(i+a,j,"右");
+                                    break;
+                                } else if (this.pieces[i + a][j].color === this.active) { // 己方
+                                    break;
+                                } else { // 敌方
+                                    continue;
+                                }
+                            }
+                        }
+
+                        // 左
+                        if (this.pieces[i - 1] && this.pieces[i - 1][j].color && this.pieces[i - 1][j].color !== this.active) { // 有对方的棋才可以走
+                            for (let a = 2; i - a >= 0; a++) {
+                                if (this.pieces[i - a][j] && this.pieces[i - a][j].color) { // 有棋子 判断是否是敌方棋子
+                                    if (this.pieces[i - a][j].color !== this.active) {
+                                        continue;
+                                    } else {
+                                        break;
+                                    }
+                                } else { //没有棋子  可以走
+                                    this.recommend.push({x: i - a, y: j, i: i, j: j, direction: "左"});
+                                    // console.log(i-a,j,"左")
+                                    break;
+                                }
+                            }
+                        }
+
+                        // 上
+                        if (this.pieces[i][j - 1] && this.pieces[i][j - 1].color && this.pieces[i][j - 1].color !== this.active) { // 有对方的棋才可以走
+                            for (let a = 2; j - a >= 0; a++) {
+                                if (this.pieces[i][j - a] && this.pieces[i][j - a].color) { // 有棋子 判断是否是敌方棋子
+                                    if (this.pieces[i][j - a].color !== this.active) {
+                                        continue;
+                                    } else {
+                                        break;
+                                    }
+                                } else { //没有棋子  可以走
+                                    this.recommend.push({x: i, y: j - a, i: i, j: j, direction: "上"});
+                                    // console.log(i,j-a,"上")
+                                    break;
+                                }
+                            }
+                        }
+
+                        // 下
+                        if (this.pieces[i][j + 1] && this.pieces[i][j + 1].color && this.pieces[i][j + 1].color !== this.active) { // 有对方的棋才可以走
+                            for (let a = 2; j + a < this.rowCount; a++) {
+                                if (this.pieces[i][j + a].color) { // 有棋子 判断是否是敌方棋子
+                                    if (this.pieces[i][j + a].color !== this.active) {
+                                        continue;
+                                    } else {
+                                        break;
+                                    }
+                                } else { //没有棋子  可以走
+                                    this.recommend.push({x: i, y: j + a, i: i, j: j, direction: "下"});
+                                    // console.log(i,j+a,"下")
+                                    break;
+                                }
+                            }
+                        }
+
+                        // 右下
+                        if (this.pieces[i + 1] && this.pieces[i + 1][j + 1] && this.pieces[i + 1][j + 1].color && this.pieces[i + 1][j + 1].color !== this.active) { // 有对方的棋才可以走
+                            for (let a = 2; a + j < this.rowCount && a + i < this.rowCount; a++) {
+                                if (this.pieces[i + a][j + a].color) { // 有棋子 判断是否是敌方棋子
+                                    if (this.pieces[i + a][j + a].color !== this.active) {
+                                        continue;
+                                    } else {
+                                        break;
+                                    }
+                                } else { //没有棋子  可以走
+                                    this.recommend.push({x: i + a, y: j + a, i: i, j: j, direction: "右下"});
+                                    // console.log(i+a,j+a,"右下")
+                                    break;
+                                }
+                            }
+                        }
+
+                        // 右上
+                        if (this.pieces[i + 1] && this.pieces[i + 1][j - 1] && this.pieces[i + 1][j - 1].color && this.pieces[i + 1][j - 1].color !== this.active) { // 有对方的棋才可以走
+                            for (let a = 2; i + a < this.rowCount && j - a >= 0; a++) {
+                                if (this.pieces[i + a][j - a].color) { // 有棋子 判断是否是敌方棋子
+                                    if (this.pieces[i + a][j - a].color !== this.active) {
+                                        continue;
+                                    } else {
+                                        break;
+                                    }
+                                } else { //没有棋子  可以走
+                                    this.recommend.push({x: i + a, y: j - a, i: i, j: j, direction: "右上"});
+                                    // console.log(i+a,j-a,"右上")
+                                    break;
+                                }
+                            }
+                        }
+
+                        // 左上
+                        if (this.pieces[i - 1] && this.pieces[i - 1][j - 1] && this.pieces[i - 1][j - 1].color && this.pieces[i - 1][j - 1].color !== this.active) { // 有对方的棋才可以走
+                            for (let a = 2; i - a >= 0 && j - a >= 0; a++) {
+                                if (this.pieces[i - a][j - a].color) { // 有棋子 判断是否是敌方棋子
+                                    if (this.pieces[i - a][j - a].color !== this.active) {
+                                        continue;
+                                    } else {
+                                        break;
+                                    }
+                                } else { //没有棋子  可以走
+                                    this.recommend.push({x: i - a, y: j - a, i: i, j: j, direction: "左上"});
+                                    // console.log(i-a,j-a,"左上")
+                                    break;
+                                }
+                            }
+                        }
+
+                        // 左下
+                        if (this.pieces[i - 1] && this.pieces[i - 1][j + 1] && this.pieces[i - 1][j + 1].color && this.pieces[i - 1][j + 1].color !== this.active) { // 有对方的棋才可以走
+                            for (let a = 2; i - a >= 0 && j + a < this.rowCount; a++) {
+                                if (this.pieces[i - a][j + a].color) { // 有棋子 判断是否是敌方棋子
+                                    if (this.pieces[i - a][j + a].color !== this.active) {
+                                        continue;
+                                    } else {
+                                        break;
+                                    }
+                                } else { //没有棋子  可以走
+                                    this.recommend.push({x: i - a, y: j + a, i: i, j: j, direction: "左下"});
+                                    // console.log(i-a,j+a,"左下")
+                                    break;
+                                }
+                            }
+                        }
+
+                    } else { // 没有棋子或不是当前方
+                        continue;
+                    }
+                }
+            }
+            console.log(this.recommend, "推荐位置数组");
+            if (this.recommend.length === 0) {
+                let piecesCount = this.getNum(this.active) + this.getNum(this.active === "black" ? "white" : "black");
+                if (piecesCount < this.rowCount * this.colCount) {
+                    this.noChess++;
+                    if (this.noChess <= 64 - piecesCount) { // 顶多连走 64-棋子数
+                        this.active = this.active === "black" ? "white" : "black";
+//                    console.log(this.active+"没有棋走，另一方继续");
+                        alert(this.active + "没有棋走，另一方继续");
+                        this.renderUi();
+                    } else {
+                        this.noChess = 0;
+                        this.over();
+                    }
+                } else { // 下满了
+                    this.over();
+                }
+            }
+        }
+
+        // 游戏结束      判断输赢、再来一局
+        over() {
+            switch (this.winner()) {
+                case "white":
+//                console.log("恭喜恭喜","白棋赢");
+                    alert("白棋赢");
+                    break;
+                case "black":
+//                console.log("恭喜恭喜","黑棋赢");
+                    alert("黑棋赢");
+                    break;
+                default:
+//                console.log("恭喜恭喜","和棋");
+                    alert("和棋");
+            }
+        }
+
+        // 走一步  1.判断这一步是否可以走 2.改变路途的棋子颜色
+        goStep(x, y) {
+//        this.recommed();
+            if (this.canGo(x, y)) {
+                this.pieces[x][y].value = 1;
+                this.pieces[x][y].color = this.active;
+
+                this.fire(x, y);
+
+                // 这里有个大坑
+//            let curPieces = Object.assign([],this.pieces);
+//            this.hisStatus.push(Object.assign([],curPieces));
+                this.hisStatus.push(this.deepClone(this.pieces));
+//            console.log(this.hisStatus,"棋局")
+
+                // 轮流走棋
+                this.active = this.active === "black" ? "white" : "black";
+
+                this.renderUi();
+
+                this.whiteCount = this.getNum("white");
+                this.blackCount = this.getNum("black");
+            } else {
+//            console.log("别捣乱，好好走");
+                alert("别捣乱，好好走");
+            }
+        }
+
+        // 深拷贝
+        deepClone(values) {
+            let copy;
+
+            // Handle the 3 simple types, and null or undefined
+            if (null === values || "object" !== typeof values) return values;
+
+            // Handle Date
+            if (values instanceof Date) {
+                copy = new Date();
+                copy.setTime(values.getTime());
+                return copy;
+            }
+
+            // Handle Array
+            if (values instanceof Array) {
+                copy = [];
+                for (let i = 0, len = values.length; i < len; i++) {
+                    copy[i] = this.deepClone(values[i]);
+                }
+                return copy;
+            }
+
+            // Handle Object
+            if (values instanceof Object) {
+                copy = {};
+                for (let attr in values) {
+                    if (values.hasOwnProperty(attr)) copy[attr] = this.deepClone(values[attr]);
+                }
+                return copy;
+            }
+
+            throw new Error("Unable to copy values! Its type isn't supported.");
+        }
+
+        // 判断谁赢winner
+        winner() {
+            if (this.getNum("white") > this.getNum("black")) {
+                this.victor = "white";
+                return "white";
+            } else if (this.getNum("white") < this.getNum("black")) {
+                this.victor = "black";
+                return "black";
+            } else {
+                this.victor = "和棋";
+                return "和棋";
+            }
+        }
+
+        // 白棋或黑棋的数量
+        getNum(color) {
+            let count = 0;
+            for (let i = 0, len = this.pieces.length; i < len; i++) {
+                for (let j = 0, len1 = this.pieces[i].length; j < len1; j++) {
+                    if (color === this.pieces[i][j].color) {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        // return 赢家
+        getVictor() {
+            switch (this.victor) {
+                case "white":
+                    alert("白棋胜");
+                    break;
+                case "black":
+                    alert("黑棋胜");
+                    break;
+                case "和棋":
+                    alert("和棋");
+                    break;
+                default:
+                    alert("出bug了");
+            }
+        }
+
+        // 认输
+        giveUp() {
+            this.victor = this.active === "black" ? "white" : "black";
+            this.getVictor();
+            this.resetData();
+        }
+
+        // 求和
+        negotiate() {
+            this.victor = "和棋";
+            this.getVictor();
+            this.resetData();
+        }
+
+        // 悔棋
+        regret() {
+            if (this.hisStatus.length > 1) {
+                this.hisStatus.pop();
+//            console.log(this.hisStatus,"删除一步的棋局");
+                this.pieces = Object.assign([], this.hisStatus[this.hisStatus.length - 1]);
+                //[...this.hisStatus[this.hisStatus.length-1]];
+                this.active = this.active === "black" ? "white" : "black";
+//            console.log(this.pieces,"当前棋局");
+                this.renderUi();
+                this.whiteCount = this.getNum("white");
+                this.blackCount = this.getNum("black");
+            } else {
+                alert("没有棋可以悔了");
+            }
+
+        }
+    }
+
+</script>
+<script type="text/javascript">
+    let score = document.getElementById("score");
+    let regret = document.getElementById("regret");
+    let giveUp = document.getElementById("giveUp");
+    let negotiate = document.getElementById("negotiate");
+    let offset;
+    let reversi = new Reversi("blackWhite");
+    reversi.canvas.addEventListener("click", function (e) {
+        offset = reversi.canvas.getBoundingClientRect();
+        let x = Math.floor((e.clientX - offset.left) / reversi.cellWidth);
+        let y = Math.floor((e.clientY - offset.top) / reversi.cellWidth);
+        console.log(x, y, "点击位置");
+        // 走棋
+        reversi.goStep(x, y);
+
+        getScore();
+    }, false);
+
+    function getScore() {
+        score.innerHTML = "黑:白 = " + reversi.blackCount + ":" + reversi.whiteCount;
+    }
+
+    giveUp.onclick = function () {
+        if (confirm("你确定认输吗？")) {
+            reversi.giveUp();
+            getScore();
+        }
+    }
+
+    negotiate.onclick = function () {
+        if (confirm("你确定求和吗？")) {
+            if (confirm("你同意和棋吗？")) {
+                reversi.negotiate();
+                getScore();
+            } else {
+                alert("对方拒绝和棋！");
+            }
+        }
+    }
+
+    regret.onclick = function () {
+        if (confirm("对方请求悔棋，是否同意？")) {
+            reversi.regret();
+            getScore();
+        } else {
+            alert("对方拒绝悔棋");
+        }
+    }
+</script>
+</html>
